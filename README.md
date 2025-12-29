@@ -38,7 +38,14 @@ USER_ID=24XXXXXX
 USER_PASSWORD=XXXXXXX
 
 # Security question answers (exact text must match the site question)
-SECURITY_ANSWERS={"name of first school you attendd":"XXX","name of favourite singer":"XXXX","name of the favourite sport":"XXXXX"}
+Q1=XXXXXXXXXXX
+A1=XXX
+
+Q2=XXXXXXXXXXXXX
+A2=YYYYY
+
+Q3=XXXXXXXXXXXXXXXX
+A3=YYYYYYq
 
 ----BE CAREFUL WRITE EXACT SAME QUES OF YOURS , THIS ARE JUST EXAMPLE----
 
