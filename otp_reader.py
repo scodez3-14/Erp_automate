@@ -26,7 +26,7 @@ def erp_otp(email_address=None, password=None, imap_server=None):
         mail.login(email_address, password)
         mail.select("inbox")
 
-        # Search for unread emails in last 5 minutes
+        # Search for unread emails in last 1 minutes
         date_since = time.strftime("%d-%b-%Y", time.localtime(time.time() - 300))
         result, data = mail.search(None, f'(UNSEEN SINCE {date_since})')
 

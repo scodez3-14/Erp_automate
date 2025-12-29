@@ -18,9 +18,9 @@ ERP_PASSWORD = os.getenv("ERP_PASSWORD")
 
 # Load security answers from environment
 answers = {
-    "name of first school you attendd": os.getenv("SEC_Q1_NAME_OF_FIRST_SCHOOL"),
-    "name of favourite singer": os.getenv("SEC_Q2_FAVOURITE_SINGER"),
-    "name of the favourite sport": os.getenv("SEC_Q3_FAVOURITE_SPORT")
+    os.getenv("Q1"): os.getenv("A1"),
+    os.getenv("Q2"): os.getenv("A2"),
+    os.getenv("Q3"): os.getenv("A3")
 }
 
 if not all([EMAIL, EMAIL_PASSWORD, ERP_USER_ID, ERP_PASSWORD]):
@@ -64,7 +64,7 @@ except:
 # STEP 4: Wait and fetch OTP with retries
 otp = None
 max_retries = 15
-retry_delay = 3
+retry_delay =1
 
 print("Waiting for OTP from email...")
 
