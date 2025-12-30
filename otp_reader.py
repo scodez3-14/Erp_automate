@@ -10,77 +10,69 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def erp_otp(email_address=None, password=None, imap_server=None):
-    """Read OTP using IMAP protocol"""
-    try:
-        # Allow environment variables to provide defaults
-        if email_address is None:
-            email_address = os.getenv("EMAIL")
-        if password is None:
-            password = os.getenv("EMAIL_PASSWORD")
-        if imap_server is None:
-            imap_server = os.getenv("IMAP_SERVER", "imap.gmail.com")
+import datetime
 
-        # Connect to IMAP server
-        mail = imaplib.IMAP4_SSL(imap_server)
-        mail.login(email_address, password)
-        mail.select("inbox")
+def erp_otp(email_address=None, password=None, timeout=120):
+    """
+    Polls the inbox for a NEW OTP email specifically from IIT KGP.
+    timeout: max seconds to wait (default 2 minutes)
+    """
+    # 1. Record the exact time we started looking
+    start_time = datetime.datetime.now(datetime.timezone.utc)
+    
+    email_address = email_address or os.getenv("EMAIL")
+    password = password or os.getenv("EMAIL_PASSWORD")
+    imap_server = os.getenv("IMAP_SERVER", "imap.gmail.com")
 
-        # Search for unread emails in last 1 minutes
-        date_since = time.strftime("%d-%b-%Y", time.localtime(time.time() - 300))
-        result, data = mail.search(None, f'(UNSEEN SINCE {date_since})')
+    print(f"Waiting for OTP (Started at {start_time.strftime('%H:%M:%S')})...")
 
-        if result != 'OK':
-            return "No new emails"
+    end_period = time.time() + timeout
+    while time.time() < end_period:
+        try:
+            mail = imaplib.IMAP4_SSL(imap_server)
+            mail.login(email_address, password)
+            mail.select("inbox")
 
-        email_ids = data[0].split()
+            # Search for unread emails with the specific subject
+            subject_filter = 'OTP for Sign In in ERP Portal of IIT Kharagpur'
+            result, data = mail.search(None, f'(UNSEEN SUBJECT "{subject_filter}")')
 
-        if not email_ids:
-            return "No unread emails found"
+            if result == 'OK' and data[0]:
+                email_ids = data[0].split()
+                
+                # Check the latest unread email
+                latest_id = email_ids[-1]
+                _, msg_data = mail.fetch(latest_id, "(RFC822)")
+                msg = email.message_from_bytes(msg_data[0][1])
+                
+                # 2. Check the 'Date' header to ensure it's "Fresh"
+                date_str = msg.get("Date")
+                email_dt = email.utils.parsedate_to_datetime(date_str)
+                
+                if email_dt > start_time:
+                    # This is the NEW one!
+                    body = ""
+                    if msg.is_multipart():
+                        for part in msg.walk():
+                            if part.get_content_type() == "text/plain":
+                                body = part.get_payload(decode=True).decode()
+                    else:
+                        body = msg.get_payload(decode=True).decode()
 
-        # Get the latest email
-        latest_email_id = email_ids[-1]
-        result, msg_data = mail.fetch(latest_email_id, "(RFC822)")
-
-        if result != 'OK':
-            return "Failed to fetch email"
-
-        # Parse email
-        msg = email.message_from_bytes(msg_data[0][1])
-
-        # Get sender and subject
-        subject = decode_header(msg["Subject"])[0][0]
-        if isinstance(subject, bytes):
-            subject = subject.decode()
-
-        print(f"Checking email from: {msg['From']}")
-        print(f"Subject: {subject}")
-
-        # Extract OTP from email body
-        otp = None
-        if msg.is_multipart():
-            for part in msg.walk():
-                content_type = part.get_content_type()
-                content_disposition = str(part.get("Content-Disposition"))
-
-                if content_type == "text/plain" and "attachment" not in content_disposition:
-                    body = part.get_payload(decode=True).decode()
                     otp = extract_otp(body)
-                    break
-        else:
-            body = msg.get_payload(decode=True).decode()
-            otp = extract_otp(body)
+                    print(f"OTP found: {otp}")
+                    mail.store(latest_id, '+FLAGS', '\\Seen') # Mark read
+                    mail.logout()
+                    return otp
+            
+            mail.logout()
+        except Exception as e:
+            print(f"Error during poll: {e}")
 
-        # Mark as read
-        mail.store(latest_email_id, '+FLAGS', '\\Seen')
+        print("OTP not arrived yet. Retrying in 1 seconds...")
+        time.sleep(1)
 
-        mail.close()
-        mail.logout()
-
-        return otp if otp else "No OTP found"
-
-    except Exception as e:
-        return f"Error: {str(e)}"
+    return "Timeout: OTP did not arrive in time."
 
 
 def extract_otp(text):

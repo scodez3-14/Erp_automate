@@ -67,19 +67,8 @@ max_retries = 15
 retry_delay =1
 
 print("Waiting for OTP from email...")
+otp = erp_otp(EMAIL, EMAIL_PASSWORD)
 
-for i in range(max_retries):
-    otp = erp_otp(EMAIL, EMAIL_PASSWORD)
-    if otp and otp != "No unread emails found":
-        print("OTP fetched:", otp)
-        break
-    print(f"OTP not yet received, retrying in {retry_delay} seconds... ({i+1}/{max_retries})")
-    time.sleep(retry_delay)
-
-if not otp or otp == "No unread emails found":
-    print("OTP could not be fetched. Exiting...")
-    driver.quit()
-    exit()
 
 # STEP 5: Enter OTP and submit
 driver.find_element(By.ID, "email_otp1").send_keys(otp)
